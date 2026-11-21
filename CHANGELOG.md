@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+**Agent**
+- Turn off the monitor on a Modern Standby PC: after the wake the display no longer goes off and on again for about a
+  minute. The agent now sends the command once, to a hidden window of its own, instead of to every window (#335,
+  [nosmile199x](https://github.com/nosmile199x)).
+
 ## 0.9.25 — 2026-11-21
 
 Brazilian Portuguese for the panel and the settings page, OpenCode and Codex permission prompts on the phone, Copilot
