@@ -56,6 +56,7 @@ never sent to the phone. See the Discord row in [PRIVACY.md](../PRIVACY.md) for 
 |---|---|
 | Widget says Discord is not connected | Start the Discord desktop app, then wait a few seconds; the agent retries on its own |
 | "Invalid redirect" or similar login error | The redirect must be exactly `http://127.0.0.1` (no trailing slash, no port), and the first one in the list. Then turn **Connect to the Discord app** off and on so PhoneBox asks again |
+| Login refused with `Missing "redirect_uri"` | The application has no saved redirect. Add `http://127.0.0.1` under **OAuth2 › Redirects**, click **Save Changes**, then turn **Connect to the Discord app** off and on |
 | Discord refuses the login | Add your account under **App Testers** in the Developer Portal |
 | Login keeps failing after changing the secret | Paste the new secret in Settings; delete `discord-token.json` next to `config.json` to force a fresh login |
 | Only some servers appear | The widget lists voice channels of the first 60 servers Discord reports, so servers beyond that do not appear. For fewer than 60: the list comes from the Discord app and is retried every minute, so wait a little or restart Discord |

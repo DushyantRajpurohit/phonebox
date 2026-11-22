@@ -250,7 +250,7 @@ public sealed partial class DiscordMonitor(ConfigStore config, ILogger<DiscordMo
         JsonNode? granted;
         try { granted = await Request("AUTHORIZE", AuthorizeArgs(cfg.ClientId), null, ct, TimeSpan.FromMinutes(2)); }
         catch (TimeoutException) { throw new LoginRefusedException("PhoneBox was not approved in Discord in time." + retry); }
-        catch (Exception ex) when (ex is not (OperationCanceledException or IOException)) { throw new LoginRefusedException($"Discord login was refused ({ex.Message})." + retry); }
+        catch (Exception ex) when (ex is not (OperationCanceledException or IOException)) { throw new LoginRefusedException(Refusal(ex.Message) + retry); }
         // no answer at all means the connection ended (Discord closed or restarted): that is not a refusal
         var code = granted?["code"]?.GetValue<string>() ?? throw new IOException("Discord closed the connection");
         try { tokens = await Exchange(cfg, new() { ["grant_type"] = "authorization_code", ["code"] = code, ["redirect_uri"] = Redirect }, ct); }
@@ -267,11 +267,11 @@ public sealed partial class DiscordMonitor(ConfigStore config, ILogger<DiscordMo
     }
 
     /// <summary>
-    /// The AUTHORIZE request over Discord's local socket. Without <c>response_type</c> Discord answers
-    /// <c>invalid_request: Missing "redirect_uri"</c> (#316), and <c>redirect_uri</c> itself is only allowed over the
-    /// WebSocket transport: over IPC it is refused with "Redirect URI cannot be used in the RPC OAuth2 Authorization
-    /// flow" (#338, #343). With <c>response_type: code</c> and no redirect, Discord uses the application's first
-    /// registered redirect, which the token exchange then names (<see cref="Redirect"/>).
+    /// The AUTHORIZE request over Discord's local socket. <c>redirect_uri</c> is only allowed over the WebSocket
+    /// transport: over IPC it is refused with "Redirect URI cannot be used in the RPC OAuth2 Authorization flow" (#338,
+    /// #343). With <c>response_type: code</c> and no redirect, Discord uses the application's first registered
+    /// redirect, which the token exchange then names (<see cref="Redirect"/>). An application with no saved redirect
+    /// gets <c>invalid_request: Missing "redirect_uri"</c>, with or without <c>response_type</c> (#316, <see cref="Refusal"/>).
     /// </summary>
     internal static JsonObject AuthorizeArgs(string? clientId) => new()
     {
@@ -279,6 +279,15 @@ public sealed partial class DiscordMonitor(ConfigStore config, ILogger<DiscordMo
         ["response_type"] = "code",
         ["scopes"] = new JsonArray(Scopes.Select(s => (JsonNode)s).ToArray()),
     };
+
+    /// <summary>
+    /// Why AUTHORIZE was refused. <c>Missing "redirect_uri"</c> means the application has no saved redirect (#316), but
+    /// it reads like a fault in the request, so the message says where to add it.
+    /// </summary>
+    internal static string Refusal(string discordMessage) =>
+        discordMessage.Contains("Missing \"redirect_uri\"", StringComparison.Ordinal)
+            ? $"Discord login was refused ({discordMessage}). Add {Redirect} under OAuth2 › Redirects in the Discord Developer Portal and click Save Changes."
+            : $"Discord login was refused ({discordMessage}).";
 
     private async Task<string> Auth(string token, CancellationToken ct)
     {

@@ -481,11 +481,10 @@ public sealed class DiscordTests : IDisposable
         }
     }
 
-    // --config with a settings file named like the login file: saving a login must not replace the settings.
     [Fact]
     public void Authorize_asks_for_a_code_without_naming_a_redirect()
     {
-        // over IPC Discord refuses redirect_uri (#338, #343), and without response_type it asks for one (#316)
+        // over IPC Discord refuses redirect_uri (#338, #343); it uses the application's first registered redirect
         var args = DiscordMonitor.AuthorizeArgs("123");
         Assert.Equal("123", args["client_id"]!.GetValue<string>());
         Assert.Equal("code", args["response_type"]!.GetValue<string>());
@@ -493,6 +492,17 @@ public sealed class DiscordTests : IDisposable
         Assert.Contains("rpc", args["scopes"]!.AsArray().Select(s => s!.GetValue<string>()));
     }
 
+    // An application without a saved redirect gets "Missing redirect_uri" from AUTHORIZE (#316): say where to add it.
+    [Fact]
+    public void A_refusal_for_a_missing_redirect_says_where_to_add_it()
+    {
+        var missing = DiscordMonitor.Refusal("OAuth2 Error: invalid_request: Missing \"redirect_uri\" in request.");
+        Assert.Contains("Missing \"redirect_uri\"", missing);
+        Assert.Contains("http://127.0.0.1 under OAuth2 › Redirects", missing);
+        Assert.Equal("Discord login was refused (OAuth2 Error: access_denied).", DiscordMonitor.Refusal("OAuth2 Error: access_denied"));
+    }
+
+    // --config with a settings file named like the login file: saving a login must not replace the settings.
     [Fact]
     public void The_login_file_never_is_the_settings_file()
     {
