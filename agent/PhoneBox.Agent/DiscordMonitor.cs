@@ -246,7 +246,7 @@ public sealed partial class DiscordMonitor(ConfigStore config, ILogger<DiscordMo
         {
             try { return await Auth(tokens.Access, ct); } catch (Exception ex) { log.LogInformation("discord: saved login no longer works ({Msg})", ex.Message); }
         }
-        const string retry = " PhoneBox will not ask again until you change the Discord settings (or turn Discord off and on).";
+        const string retry = " PhoneBox will not ask again until you change the Discord settings (or turn Discord off and save, wait a few seconds, then turn it on and save again).";
         JsonNode? granted;
         try { granted = await Request("AUTHORIZE", AuthorizeArgs(cfg.ClientId), null, ct, TimeSpan.FromMinutes(2)); }
         catch (TimeoutException) { throw new LoginRefusedException("PhoneBox was not approved in Discord in time." + retry); }
